@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -9,6 +10,9 @@ from services.context_provider import ContextProvider
 import os
 from dotenv import load_dotenv
 import uvicorn
+import json
+import asyncio
+import tempfile
 
 # Load environment variables
 load_dotenv()
@@ -26,31 +30,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info("🚀 Starting Context-Aware Chat App Backend")
-    await initialize_context_provider()
+    logger.info("📄 No PDF loaded - waiting for user upload")
+    # Remove automatic initialization - users will upload their own PDFs
     yield
     # Shutdown
     logger.info("👋 Shutting down Context-Aware Chat App Backend")
-
-
-async def initialize_context_provider():
-    """Initialize the context provider with PDF processing and embeddings"""
-    global context_provider
-
-    try:
-        logger.info("Initializing context provider...")
-        context_provider = ContextProvider()
-
-        # Initialize in background (this may take time for large PDFs)
-        success = context_provider.initialize()
-
-        if success:
-            logger.info("✅ Context provider initialized successfully")
-        else:
-            logger.error("❌ Failed to initialize context provider")
-            context_provider = None
-    except Exception as e:
-        logger.error(f"❌ Error initializing context provider: {e}")
-        context_provider = None
 
 
 app = FastAPI(
@@ -83,81 +67,8 @@ class ContextChatRequest(BaseModel):
     chat_id: str
 
 
-class ContextChatResponse(BaseModel):
-    response: str
-    context_used: bool = False
-    context_pages: Optional[List[int]] = None
-    chunks_used: Optional[int] = None
-    success: bool = True
-    error: Optional[str] = None
-
-
 # In-memory storage for demo (replace with database in production)
 messages_store: List[ChatMessage] = []
-
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Context-Aware Chat App Backend API",
-        "status": "running",
-        "context_provider_ready": context_provider is not None
-        and context_provider.is_ready,
-    }
-
-
-@app.post("/chat", response_model=ContextChatResponse)
-async def chat_endpoint(request: ContextChatRequest):
-    """
-    Process a chat message using PDF context and return a response.
-    """
-    global context_provider
-
-    # Check if context provider is ready
-    if not context_provider or not context_provider.is_ready:
-        return ContextChatResponse(
-            response="I'm sorry, but the context system is not ready yet. Please try again in a moment.",
-            context_used=False,
-            success=False,
-            error="Context provider not initialized",
-        )
-
-    try:
-        # Store the message
-        message = ChatMessage(
-            id=str(len(messages_store) + 1),
-            message=request.message,
-            chat_id=request.chat_id,
-        )
-        messages_store.append(message)
-
-        # Get response from context provider
-        result = context_provider.chat(request.message)
-
-        if result.get("success", False):
-            return ContextChatResponse(
-                response=result["answer"],
-                context_used=result["chunks_used"] > 0,
-                context_pages=result.get("context_pages", []),
-                chunks_used=result.get("chunks_used", 0),
-                success=True,
-            )
-        else:
-            return ContextChatResponse(
-                response="I encountered an error while processing your question. Please try again.",
-                context_used=False,
-                success=False,
-                error=result.get("error", "Unknown error"),
-            )
-
-    except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}")
-        return ContextChatResponse(
-            response="I'm sorry, there was an error processing your request.",
-            context_used=False,
-            success=False,
-            error=str(e),
-        )
 
 
 @app.get("/messages", response_model=List[ChatMessage])
@@ -191,15 +102,191 @@ async def get_context_status():
     }
 
 
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    """
+    Upload a new PDF file and reinitialize the context provider.
+    Maximum file size: 30MB
+    """
+    global context_provider
+
+    # Validate file type
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    # Check file size (30MB limit)
+    MAX_FILE_SIZE = settings.max_file_size_mb * 1024 * 1024  # Convert MB to bytes
+
+    # Read file content to check size
+    file_content = await file.read()
+    file_size = len(file_content)
+
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File size ({file_size / (1024*1024):.1f}MB) exceeds maximum allowed size ({settings.max_file_size_mb}MB)",
+        )
+
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    try:
+        # Create a temporary file to save the uploaded PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            # Write the file content to temp file
+            temp_file.write(file_content)
+            temp_pdf_path = temp_file.name
+
+        # Update the PDF path in settings
+        settings.pdf_path = temp_pdf_path
+
+        # Reinitialize context provider with new PDF
+        logger.info(
+            f"Processing uploaded PDF: {file.filename} ({file_size / (1024*1024):.1f}MB)"
+        )
+        context_provider = ContextProvider()
+        success = context_provider.initialize()
+
+        if success:
+            logger.info("✅ Context provider initialized successfully")
+            return {
+                "message": f"PDF '{file.filename}' uploaded and processed successfully",
+                "filename": file.filename,
+                "file_size_mb": round(file_size / (1024 * 1024), 1),
+                "status": "ready",
+                "chunks_count": len(context_provider.chunks),
+                # Include complete health status for frontend
+                "health_status": {
+                    "context_provider_ready": True,
+                    "pdf_loaded": True,
+                    "chunks_count": len(context_provider.chunks),
+                    "message": f"Ready with {len(context_provider.chunks)} chunks",
+                },
+                "success": True,
+            }
+        else:
+            logger.error("❌ Failed to initialize context provider")
+            return {
+                "message": "Failed to process the uploaded PDF",
+                "filename": file.filename,
+                "status": "error",
+                "health_status": {
+                    "context_provider_ready": False,
+                    "pdf_loaded": False,
+                    "chunks_count": 0,
+                    "message": "Failed to process PDF - please try again",
+                },
+                "success": False,
+            }
+
+    except Exception as e:
+        logger.error(f"Error processing uploaded PDF: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": f"Error processing PDF: {str(e)}",
+                "health_status": {
+                    "context_provider_ready": False,
+                    "pdf_loaded": False,
+                    "chunks_count": 0,
+                    "message": "Error processing PDF - please try again",
+                },
+                "success": False,
+            },
+        )
+
+
 @app.get("/health")
 async def health_check():
     return {
         "status": "healthy",
         "version": "1.0.0",
         "context_provider_status": (
-            "ready" if context_provider and context_provider.is_ready else "not_ready"
+            "ready"
+            if context_provider and context_provider.is_ready
+            else "no_pdf_loaded"
+        ),
+        "context_provider_ready": context_provider is not None
+        and context_provider.is_ready,
+        "pdf_loaded": context_provider is not None and context_provider.is_ready,
+        "chunks_count": (
+            len(context_provider.chunks)
+            if context_provider and context_provider.is_ready
+            else 0
+        ),
+        "message": (
+            f"Ready with {len(context_provider.chunks)} chunks"
+            if context_provider and context_provider.is_ready
+            else "Please upload a PDF file to start chatting"
         ),
     }
+
+
+async def generate_chat_stream(request: ContextChatRequest):
+    """Generate streaming chat response"""
+    global context_provider
+
+    # Check if context provider is ready
+    if not context_provider or not context_provider.is_ready:
+        yield f"data: {json.dumps({'type': 'error', 'error': 'Context provider not initialized', 'success': False})}\n\n"
+        return
+
+    try:
+        # Store the message
+        message = ChatMessage(
+            id=str(len(messages_store) + 1),
+            message=request.message,
+            chat_id=request.chat_id,
+        )
+        messages_store.append(message)
+
+        # Get message history for this chat (including the current message)
+        chat_messages = []
+        current_chat_messages = [
+            msg for msg in messages_store if msg.chat_id == request.chat_id
+        ]
+
+        # Build conversation history with proper role detection
+        for i, msg in enumerate(current_chat_messages):
+            # If it's the message we just added, it's a human message
+            if msg.message == request.message and i == len(current_chat_messages) - 1:
+                role = "human"
+            else:
+                # Alternate between human and AI based on position
+                # Odd positions (1st, 3rd, 5th...) are human messages
+                # Even positions (2nd, 4th, 6th...) are AI responses
+                role = "human" if i % 2 == 0 else "ai"
+
+            chat_messages.append(
+                {"role": role, "content": msg.message, "message": msg.message}
+            )
+
+        # Stream the response with conversation history
+        for chunk in context_provider.chat_stream(request.message, chat_messages):
+            yield f"data: {json.dumps(chunk)}\n\n"
+            await asyncio.sleep(0.05)  # Small delay to prevent overwhelming the client
+
+    except Exception as e:
+        logger.error(f"Error in streaming chat endpoint: {e}")
+        yield f"data: {json.dumps({'type': 'error', 'error': str(e), 'success': False})}\n\n"
+
+
+@app.get("/chat/stream")
+async def chat_stream_endpoint(message: str, chat_id: str = "default"):
+    """
+    Process a chat message using PDF context and return a streaming response.
+    """
+    request = ContextChatRequest(message=message, chat_id=chat_id)
+    return StreamingResponse(
+        generate_chat_stream(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 
 if __name__ == "__main__":

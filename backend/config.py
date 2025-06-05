@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     openai_max_tokens: int = 500
     
     # PDF Configuration
-    pdf_path: str = "./assets/sample.pdf"
+    pdf_path: str = ""  # No default PDF - users will upload their own
+    max_file_size_mb: int = 30  # Maximum PDF file size in MB
     chunk_size: int = 1000
     chunk_overlap: int = 200
     

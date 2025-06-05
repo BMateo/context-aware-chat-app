@@ -1,15 +1,13 @@
 import PyPDF2
 import re
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict
 from dataclasses import dataclass
 from pathlib import Path
-import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-PATH_TO_PDF = "./assets/sample.pdf"
 
 
 @dataclass
@@ -70,8 +68,6 @@ class PDFProcessor:
                             self.raw_text += (
                                 f"\n--- Page {page_num + 1} ---\n{page_text}\n"
                             )
-                            if page_num == 0:
-                                print(page_text)
                     except Exception as e:
                         logger.warning(
                             f"Failed to extract text from page {page_num + 1}: {e}"
@@ -114,8 +110,6 @@ class PDFProcessor:
 
         for page_info in self.pages_text:
             page_number = page_info["page_number"]
-            if page_number < 5:
-                print(page_info)
             page_text = self.clean_text(page_info["text"])
 
             # Skip empty pages
@@ -173,28 +167,6 @@ class PDFProcessor:
             "avg_chars_per_chunk": total_chars / len(self.chunks) if self.chunks else 0,
         }
 
-    def save_chunks_to_json(self, output_path: str):
-        """Save processed chunks to JSON file"""
-        chunks_data = [chunk.to_dict() for chunk in self.chunks]
-
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "metadata": {
-                        "source_pdf": str(self.pdf_path),
-                        "chunk_size": self.chunk_size,
-                        "chunk_overlap": self.chunk_overlap,
-                        "statistics": self.get_statistics(),
-                    },
-                    "chunks": chunks_data,
-                },
-                f,
-                indent=2,
-                ensure_ascii=False,
-            )
-
-        logger.info(f"Saved {len(chunks_data)} chunks to {output_path}")
-
     def process_pipeline(self) -> bool:
         """Run the complete processing pipeline"""
         logger.info("Starting PDF processing pipeline...")
@@ -212,31 +184,3 @@ class PDFProcessor:
         logger.info(f"Statistics: {stats}")
 
         return True
-
-
-def main():
-    """Example usage of the PDF processing pipeline"""
-
-    # Initialize processor
-    processor = PDFProcessor(
-        pdf_path=PATH_TO_PDF,  # Update this path
-        chunk_size=1000,  # Adjust based on your needs
-        chunk_overlap=200,
-    )
-
-    # Run processing pipeline
-    if processor.process_pipeline():
-        print("✅ PDF processing completed successfully!")
-
-        # Save processed data
-        processor.save_chunks_to_json("processed_document.json")
-
-        # Access chunks for further processing (e.g., embeddings)
-        print(f"Ready for embeddings: {len(processor.chunks)} chunks available")
-
-    else:
-        print("❌ PDF processing failed!")
-
-
-if __name__ == "__main__":
-    main()

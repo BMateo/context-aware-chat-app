@@ -3,9 +3,9 @@ import numpy as np
 from typing import List, Dict
 from dataclasses import dataclass
 import logging
-import os
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 from config import settings
 from services.pdf_processor import PDFProcessor, DocumentChunk
 
@@ -31,7 +31,7 @@ class ContextProvider:
         self.pdf_processor = PDFProcessor(
             pdf_path=self.pdf_path,
             chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap
+            chunk_overlap=settings.chunk_overlap,
         )
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.chunks: List[DocumentChunk] = []
@@ -83,10 +83,12 @@ class ContextProvider:
         vec1, vec2 = np.array(vec1), np.array(vec2)
         return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
-    def _find_relevant_chunks(self, query: str, top_k: int = None) -> List[RelevantChunk]:
+    def _find_relevant_chunks(
+        self, query: str, top_k: int = None
+    ) -> List[RelevantChunk]:
         """Find most relevant chunks for the query"""
         top_k = top_k or settings.top_k_chunks
-        
+
         try:
             query_embedding = (
                 self.client.embeddings.create(
@@ -121,10 +123,11 @@ class ContextProvider:
 
         return relevant_chunks
 
-    def chat(self, query: str) -> Dict:
-        """Process query and return response with context"""
+    def chat_stream(self, query: str, message_history: List = None):
+        """Process query and return streaming response with context and conversation history"""
         if not self.is_ready:
-            return {"error": "Context provider not initialized"}
+            yield {"error": "Context provider not initialized", "success": False}
+            return
 
         # Find relevant chunks
         relevant_chunks = self._find_relevant_chunks(query)
@@ -137,30 +140,74 @@ class ContextProvider:
             ]
         )
 
-        # Create prompt
-        prompt = f"""Based on the following context from a PDF document, answer the user's question.
+        # Build conversation history
+        conversation_history = ""
+        if message_history and len(message_history) > 1:
+            # Get the last 10 messages to avoid making the prompt too long
+            recent_messages = message_history[-10:]
+            history_parts = []
+            for msg in recent_messages[:-1]:  # Exclude the current message
+                role = "User" if msg.get("role") == "human" else "Assistant"
+                content = msg.get("message", msg.get("content", ""))
+                if content.strip():
+                    history_parts.append(f"{role}: {content}")
+            
+            if history_parts:
+                conversation_history = f"""
+
+CONVERSATION HISTORY:
+{chr(10).join(history_parts)}
+"""
+
+        # Create enhanced prompt with history
+        prompt = f"""
+You are an intelligent assistant trained on the following PDF content. Answer the user's question based **only** on the context provided below.
+
+If the question isn't related to the context or there's not enough information to answer it meaningfully, respond politely and conversationally — don't guess or make up facts. It's okay to be a bit playful or redirect the user to ask something relevant.
+
+Use the conversation history to understand the context of the current question and provide more relevant, coherent responses.
 
 CONTEXT:
-{context}
+{context}{conversation_history}
 
-QUESTION: {query}
+CURRENT QUESTION: {query}
 
-Please answer based only on the provided context. If the context doesn't contain enough information, say so."""
+Your response:
+"""
 
         try:
-            response = self.client.chat.completions.create(
+            # First, send metadata about the context
+            yield {
+                "type": "metadata",
+                "context_pages": [chunk.chunk.page_number for chunk in relevant_chunks],
+                "chunks_used": len(relevant_chunks),
+                "success": True,
+            }
+
+            # Stream the response
+            stream = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=settings.openai_max_tokens,
                 temperature=settings.openai_temperature,
+                stream=True,
             )
 
-            return {
-                "answer": response.choices[0].message.content,
-                "context_pages": [chunk.chunk.page_number for chunk in relevant_chunks],
-                "chunks_used": len(relevant_chunks),
-                "success": True
-            }
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    yield {
+                        "type": "content",
+                        "content": chunk.choices[0].delta.content,
+                        "success": True,
+                    }
+
+            # Send completion signal
+            yield {"type": "done", "success": True}
+
         except Exception as e:
-            logger.error(f"Failed to generate response: {e}")
-            return {"error": "Failed to generate response", "success": False}
+            logger.error(f"Failed to generate streaming response: {e}")
+            yield {
+                "type": "error",
+                "error": "Failed to generate response",
+                "success": False,
+            }
