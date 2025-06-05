@@ -1,0 +1,414 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.scrollArea {
+  overflow-y: auto;
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.messagesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.emptyText {
+  color: #71717a;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.messageWrapper {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 100%;
+}
+
+.messageWrapperUser {
+  justify-content: flex-end;
+}
+
+.avatar {
+  height: 2rem;
+  width: 2rem;
+  border-radius: 50%;
+  background-color: #18181b;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.messageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: calc(100% - 3rem);
+  min-width: 0;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.userName {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: #71717a;
+}
+
+.messageBubble {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  line-height: 1.5;
+  max-width: 100%;
+}
+
+.messageBubbleUser {
+  background-color: #18181b;
+  color: #fafafa;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.messageBubbleAi {
+  background-color: #f4f4f5;
+  color: #18181b;
+  border: 1px solid #e4e4e7;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.messageText {
+  font-size: 0.9375rem;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.actionButton {
+  height: 2rem;
+  width: 2rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.actionButton:hover {
+  opacity: 1;
+}
+
+.typingIndicator {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 100%;
+}
+
+.typingBubble {
+  background-color: #f4f4f5;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border-bottom-left-radius: 0.25rem;
+  border: 1px solid #e4e4e7;
+  min-width: 60px;
+}
+
+.typingDots {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.typingDots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #71717a;
+  animation: typing 1.4s ease-in-out infinite;
+}
+
+.typingDots span:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.typingDots span:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.typingDots span:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+.inputSection {
+  padding: 1.5rem;
+  border-top: 1px solid #e4e4e7;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: center;
+  position: sticky;
+  bottom: 0;
+  margin-top: 3rem;
+}
+
+.inputContainer {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  max-width: 48rem;
+}
+
+.textarea {
+  min-height: 52px;
+  max-height: 8rem;
+  flex: 1;
+  font-size: 1rem;
+  line-height: 1.5;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  resize: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.sendButton {
+  padding: 0 1.5rem;
+  white-space: nowrap;
+  min-height: 52px;
+  height: 52px;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  background-color: #18181b;
+  color: #ffffff;
+  transition: all 0.2s;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: #000000;
+  transform: translateY(-1px);
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Tablet and Mobile design (up to 1024px) */
+@media (max-width: 1024px) {
+  .container {
+    height: calc(100vh - 3.5rem);
+  }
+  
+  .scrollArea {
+    padding: 1rem 0.875rem;
+  }
+  
+  .messagesContainer {
+    max-width: 42rem;
+    gap: 1.25rem;
+  }
+  
+  .messageWrapper,
+  .messageWrapperUser,
+  .typingIndicator {
+    max-width: 100%;
+  }
+  
+  .messageWrapper {
+    gap: 0.625rem;
+  }
+  
+  .avatar {
+    height: 1.875rem;
+    width: 1.875rem;
+  }
+  
+  .messageContent {
+    max-width: calc(100% - 2.75rem);
+  }
+  
+  .messageHeader {
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .userName {
+    font-size: 0.875rem;
+  }
+  
+  .timestamp {
+    font-size: 0.75rem;
+  }
+  
+  .messageBubble {
+    padding: 0.875rem;
+    border-radius: 0.625rem;
+  }
+  
+  .messageBubbleUser {
+    border-bottom-right-radius: 0.25rem;
+  }
+  
+  .messageBubbleAi {
+    border-bottom-left-radius: 0.25rem;
+  }
+  
+  .messageText {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  
+  .actionButtons {
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+  
+  .actionButton {
+    height: 1.875rem;
+    width: 1.875rem;
+  }
+  
+  .inputSection {
+    padding: 1.25rem 0.875rem;
+    position: sticky;
+    bottom: 0;
+    background-color: #ffffff;
+    border-top: 1px solid #e4e4e7;
+    display: flex;
+    flex-shrink: 0;
+  }
+  
+  .inputContainer {
+    gap: 0.625rem;
+    max-width: 42rem;
+    display: flex;
+    align-items: center;
+  }
+  
+  .textarea {
+    min-height: 48px;
+    max-height: 6rem;
+    font-size: 1rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.625rem;
+  }
+  
+  .sendButton {
+    padding: 0 1.25rem;
+    font-size: 0.875rem;
+    min-height: 48px;
+    height: 48px;
+    border-radius: 0.625rem;
+  }
+  
+  .emptyState {
+    min-height: 200px;
+    padding: 1rem;
+  }
+  
+  .emptyText {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Small Mobile devices */
+@media (max-width: 480px) {
+  .scrollArea {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .messagesContainer {
+    max-width: none;
+  }
+  
+  .messageWrapper {
+    gap: 0.5rem;
+  }
+  
+  .avatar {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+  
+  .messageContent {
+    max-width: calc(100% - 2.5rem);
+  }
+  
+  .messageBubble {
+    padding: 0.75rem;
+  }
+  
+  .messageText {
+    font-size: 0.8125rem;
+  }
+  
+  .inputSection {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .inputContainer {
+    gap: 0.5rem;
+    max-width: none;
+  }
+  
+  .textarea {
+    padding: 0.625rem 0.75rem;
+  }
+  
+  .sendButton {
+    padding: 0 0.875rem;
+    font-size: 0.8125rem;
+  }
+} 

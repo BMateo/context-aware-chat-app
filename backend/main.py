@@ -74,13 +74,13 @@ app.add_middleware(
 class ChatMessage(BaseModel):
     id: Optional[str] = None
     message: str
-    user_id: str
+    chat_id: str
     timestamp: Optional[str] = None
 
 
 class ContextChatRequest(BaseModel):
     message: str
-    user_id: str
+    chat_id: str
 
 
 class ContextChatResponse(BaseModel):
@@ -127,7 +127,7 @@ async def chat_endpoint(request: ContextChatRequest):
         message = ChatMessage(
             id=str(len(messages_store) + 1),
             message=request.message,
-            user_id=request.user_id,
+            chat_id=request.chat_id,
         )
         messages_store.append(message)
 

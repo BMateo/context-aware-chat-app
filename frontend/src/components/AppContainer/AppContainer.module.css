@@ -1,0 +1,25 @@
+.appContainer {
+  display: flex;
+  height: 100vh;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+.appContainerMobile {
+  position: relative;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .appContainer {
+    flex-direction: column;
+  }
+  
+  .appContainerMobile .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+  }
+} 

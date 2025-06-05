@@ -1,0 +1,62 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  user-select: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Variants */
+.default {
+  background-color: #18181b;
+  color: #fafafa;
+}
+
+.default:hover {
+  background-color: #27272a;
+}
+
+.ghost {
+  background-color: transparent;
+  color: #71717a;
+}
+
+.ghost:hover {
+  background-color: #f4f4f5;
+  color: #18181b;
+}
+
+/* Sizes */
+.sm {
+  height: 2rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.defaultSize {
+  height: 2.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.icon {
+  height: 2.5rem;
+  width: 2.5rem;
+  padding: 0;
+} 
