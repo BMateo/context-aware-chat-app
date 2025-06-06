@@ -14,6 +14,7 @@ import uvicorn
 import json
 import asyncio
 import tempfile
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -86,20 +87,18 @@ async def clear_messages():
     return {"message": "All messages cleared"}
 
 
-@app.get("/context/status")
-async def get_context_status():
-    """Get context provider status and statistics"""
-    if not context_provider:
-        return {"status": "not_initialized", "ready": False}
-
+@app.delete("/messages/clear/{chat_id}")
+async def clear_messages_by_chat(chat_id: str):
+    """Clear messages for a specific chat."""
+    global messages_store
+    initial_count = len(messages_store)
+    messages_store = [msg for msg in messages_store if msg.chat_id != chat_id]
+    cleared_count = initial_count - len(messages_store)
+    logger.info(f"🗑️ Cleared {cleared_count} messages for chat {chat_id}")
     return {
-        "status": "ready" if context_provider.is_ready else "initializing",
-        "ready": context_provider.is_ready,
-        "chunks_count": (
-            len(context_provider.chunks) if context_provider.is_ready else 0
-        ),
-        "pdf_path": settings.pdf_path,
-        "model": settings.openai_model,
+        "message": f"Cleared {cleared_count} messages for chat {chat_id}",
+        "cleared_count": cleared_count,
+        "chat_id": chat_id
     }
 
 
@@ -236,7 +235,7 @@ async def get_token_usage():
 
 async def generate_chat_stream(request: ContextChatRequest):
     """Generate streaming chat response"""
-    global context_provider
+    global context_provider, messages_store
 
     # Check if context provider is ready
     if not context_provider or not context_provider.is_ready:
@@ -244,13 +243,14 @@ async def generate_chat_stream(request: ContextChatRequest):
         return
 
     try:
-        # Store the message
-        message = ChatMessage(
+        # Store the user message
+        user_message = ChatMessage(
             id=str(len(messages_store) + 1),
             message=request.message,
             chat_id=request.chat_id,
+            timestamp=datetime.now().isoformat(),
         )
-        messages_store.append(message)
+        messages_store.append(user_message)
 
         # Get message history for this chat (including the current message)
         chat_messages = []
@@ -273,8 +273,25 @@ async def generate_chat_stream(request: ContextChatRequest):
                 {"role": role, "content": msg.message, "message": msg.message}
             )
 
-        # Stream the response with conversation history
+        # Stream the response with conversation history and store AI response
+        ai_response_content = ""
         for chunk in context_provider.chat_stream(request.message, chat_messages):
+            # Check if this is the completion chunk with accumulated content
+            if chunk.get("type") == "done" and chunk.get("accumulated_content"):
+                ai_response_content = chunk["accumulated_content"]
+
+                # Store the AI response in the message store
+                ai_message = ChatMessage(
+                    id=str(len(messages_store) + 1),
+                    message=ai_response_content,
+                    chat_id=request.chat_id,
+                    timestamp=datetime.now().isoformat(),
+                )
+                messages_store.append(ai_message)
+                logger.info(
+                    f"💬 Stored AI response for chat {request.chat_id}: {len(ai_response_content)} characters"
+                )
+
             yield f"data: {json.dumps(chunk)}\n\n"
             await asyncio.sleep(0.05)  # Small delay to prevent overwhelming the client
 

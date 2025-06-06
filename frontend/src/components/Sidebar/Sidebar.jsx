@@ -103,6 +103,7 @@ export default function Sidebar({
                         variant="ghost"
                         size="icon"
                         className={styles.deleteButton}
+                        title="Clear chat messages"
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteChat(chat.id);

@@ -139,7 +139,7 @@ class ContextProvider:
         # Build context
         context = "\n\n".join(
             [
-                f"Page {chunk.chunk.page_number}: {chunk.chunk.content}"
+                f"{chunk.chunk.content}"
                 for chunk in relevant_chunks
             ]
         )
@@ -183,12 +183,12 @@ Your response:
             # First, send metadata about the context
             yield {
                 "type": "metadata",
-                "context_pages": [chunk.chunk.page_number for chunk in relevant_chunks],
                 "chunks_used": len(relevant_chunks),
                 "success": True,
             }
 
-            # Stream the response
+            # Stream the response and accumulate content
+            accumulated_content = ""
             stream = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
@@ -203,17 +203,24 @@ Your response:
                     len(chunk.choices) > 0
                     and chunk.choices[0].delta.content is not None
                 ):
+                    content_chunk = chunk.choices[0].delta.content
+                    accumulated_content += content_chunk
                     yield {
                         "type": "content",
-                        "content": chunk.choices[0].delta.content,
+                        "content": content_chunk,
                         "success": True,
                     }
+                
                 # Track usage when available (usually in the last chunk)
                 if hasattr(chunk, "usage") and chunk.usage:
                     token_tracker.track_chat_usage(chunk.usage, self.model)
 
-            # Send completion signal
-            yield {"type": "done", "success": True}
+            # Send completion signal with accumulated content
+            yield {
+                "type": "done", 
+                "success": True,
+                "accumulated_content": accumulated_content
+            }
 
         except Exception as e:
             logger.error(f"Failed to generate streaming response: {e}")

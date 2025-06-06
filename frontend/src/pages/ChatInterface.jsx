@@ -29,6 +29,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const lastUserMessageRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const messages = currentChat?.messages || [];
   const isChatSelected = currentChat && currentChat.id;
@@ -40,6 +41,15 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       scrollToBottom();
     }
   }, [messages]);
+
+  // Focus textarea when a new chat is selected
+  useEffect(() => {
+    if (isChatSelected && contextReady) {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  }, [currentChat?.id, contextReady]);
 
   // Fetch initial health status when component mounts
   useEffect(() => {
@@ -118,9 +128,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     let streamingMessageIndex = messagesWithPlaceholder.length - 1;
 
     // Scroll to show the user's message at the top of the screen
-    setTimeout(() => {
-      scrollToUserMessage();
-    }, 100);
+    scrollToUserMessage();
 
     try {
       // Create EventSource for streaming
@@ -163,7 +171,10 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
             const finalMessages = [...newMessages, errorMessage];
             onUpdateMessages(finalMessages);
             setIsTyping(false);
-            eventSource.close();
+            // Focus textarea after streaming error
+            if (textareaRef.current) {
+              textareaRef.current.focus();
+            }
           }
         } catch (parseError) {
           console.error("Error parsing SSE data:", parseError);
@@ -185,7 +196,10 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
         const finalMessages = [...newMessages, errorMessage];
         onUpdateMessages(finalMessages);
         setIsTyping(false);
-        eventSource.close();
+        // Focus textarea after connection error
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
       };
     } catch (error) {
       console.error("Error setting up streaming:", error);
@@ -346,7 +360,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
                       {message.role === "ai" ? "GenerativeAgent" : "You"}
                     </span>
                     <span className={styles.timestamp}>
-                      {message.timestamp}
+                      {message.timestamp.toLocaleString()}
                     </span>
                   </div>
                   <div
@@ -450,11 +464,18 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
             onKeyPress={handleKeyPress}
             className={styles.textarea}
             disabled={isLoading || !contextReady || isTyping || !isChatSelected}
+            ref={textareaRef}
           />
           <Button
             className={styles.sendButton}
             onClick={handleSend}
-            disabled={isLoading || !input.trim() || !contextReady || isTyping || !isChatSelected}
+            disabled={
+              isLoading ||
+              !input.trim() ||
+              !contextReady ||
+              isTyping ||
+              !isChatSelected
+            }
           >
             {isLoading ? "Sending..." : "Send"}
           </Button>
