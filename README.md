@@ -133,13 +133,13 @@ REACT_APP_API_BASE_URL=http://localhost:8000
 
 ### 3. **Document Chunking Performance**
 - **Challenge**: Initial chunking strategy poor at answering meta/general questions about documents
-- **Solution**: Implemented RecursiveCharacterTextSplitter with optimized separators
+- **Solution**: Implemented RecursiveCharacterTextSplitter with optimized separators using the entire document instead of chunking each page
 
 ### 4. **Message Persistence**
 - **Challenge**: Conversations lost on page reload
 - **Solution**: Added backend message storage with conversation reconstruction
 
-## Improvements
+## Improvements (TODOS)
 
 - **Export Functionality**: Export conversations as PDF or markdown
 - **API Rate Limiting**: Implement proper rate limiting in the backend

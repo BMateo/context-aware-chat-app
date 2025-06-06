@@ -15,7 +15,7 @@ export default function AppContainer({
   onDeleteChat
 }) {
   const [isMobile, setIsMobile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check if screen is mobile size
   useEffect(() => {
