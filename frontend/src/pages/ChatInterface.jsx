@@ -31,6 +31,9 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
   const lastUserMessageRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // API Base URL from environment variable
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+
   const messages = currentChat?.messages || [];
   const isChatSelected = currentChat && currentChat.id;
 
@@ -59,7 +62,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
   // Remove health stream logic and replace with simple fetch
   const fetchHealthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:8000/health");
+      const response = await fetch(`${API_BASE_URL}/health`);
       const healthData = await response.json();
       setHealthStatus(healthData);
       setContextReady(healthData.context_provider_ready);
@@ -133,7 +136,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     try {
       // Create EventSource for streaming
       const eventSource = new EventSource(
-        `http://localhost:8000/chat/stream?message=${encodeURIComponent(
+        `${API_BASE_URL}/chat/stream?message=${encodeURIComponent(
           userMessage.content
         )}&chat_id=${encodeURIComponent(currentChat?.id || "default")}`
       );
@@ -264,7 +267,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("http://localhost:8000/upload-pdf", {
+      const response = await fetch(`${API_BASE_URL}/upload-pdf`, {
         method: "POST",
         body: formData,
       });

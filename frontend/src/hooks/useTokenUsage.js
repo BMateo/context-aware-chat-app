@@ -5,12 +5,15 @@ export const useTokenUsage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // API Base URL from environment variable
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+
   const fetchTokenUsage = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8000/tokens/usage');
+      const response = await fetch(`${API_BASE_URL}/tokens/usage`);
       const result = await response.json();
       
       if (result.success) {

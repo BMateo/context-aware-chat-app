@@ -10,6 +10,9 @@ function App() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
+  // API Base URL from environment variable
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+
   // Generate unique ID for new chats
   const generateChatId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -19,7 +22,7 @@ function App() {
   const fetchAndReconstructConversations = async () => {
     try {
       setIsLoadingMessages(true);
-      const response = await fetch("http://localhost:8000/messages");
+      const response = await fetch(`${API_BASE_URL}/messages`);
 
       if (response.ok) {
         const allMessages = await response.json();
@@ -118,7 +121,7 @@ function App() {
     if (currentChatId) {
       try {
         // Call backend to clear messages for this chat
-        const response = await fetch(`http://localhost:8000/messages/clear/${currentChatId}`, {
+        const response = await fetch(`${API_BASE_URL}/messages/clear/${currentChatId}`, {
           method: 'DELETE',
         });
 
@@ -177,7 +180,7 @@ function App() {
   const handleDeleteChat = useCallback(async (chatId) => {
     try {
       // Call backend to clear messages for this chat
-      const response = await fetch(`http://localhost:8000/messages/clear/${chatId}`, {
+      const response = await fetch(`${API_BASE_URL}/messages/clear/${chatId}`, {
         method: 'DELETE',
       });
 
