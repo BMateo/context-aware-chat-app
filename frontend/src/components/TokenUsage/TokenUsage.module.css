@@ -1,0 +1,179 @@
+.container {
+  padding: 12px;
+  margin: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  color: #6b7280;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.loading, .error {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  padding: 8px;
+}
+
+.error {
+  color: #dc2626;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statIconSvg {
+  width: 12px;
+  height: 12px;
+  color: #6b7280;
+}
+
+.statContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+.breakdown {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breakdownItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.breakdownLabel {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.breakdownValue {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .title {
+    color: #f3f4f6;
+  }
+  
+  .icon {
+    color: #9ca3af;
+  }
+  
+  .statIcon {
+    background: #374151;
+  }
+  
+  .statIconSvg {
+    color: #9ca3af;
+  }
+  
+  .statValue {
+    color: #f9fafb;
+  }
+  
+  .statLabel,
+  .breakdownLabel {
+    color: #9ca3af;
+  }
+  
+  .breakdownValue {
+    color: #e5e7eb;
+  }
+  
+  .breakdown {
+    border-top-color: #374151;
+  }
+  
+  .loading {
+    color: #9ca3af;
+  }
+  
+  .error {
+    color: #f87171;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+    margin: 10px;
+  }
+  
+  .stats {
+    gap: 10px;
+  }
+  
+  .statValue {
+    font-size: 13px;
+  }
+  
+  .breakdown {
+    gap: 4px;
+  }
+} 

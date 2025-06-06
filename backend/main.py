@@ -7,6 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from config import settings
 from services.context_provider import ContextProvider
+from services.token_tracker import token_tracker
 import os
 from dotenv import load_dotenv
 import uvicorn
@@ -220,6 +221,17 @@ async def health_check():
             else "Please upload a PDF file to start chatting"
         ),
     }
+
+
+@app.get("/tokens/usage")
+async def get_token_usage():
+    """Get current session token usage statistics"""
+    try:
+        stats = token_tracker.get_session_stats()
+        return {"success": True, "data": stats}
+    except Exception as e:
+        logger.error(f"Error fetching token usage: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch token usage")
 
 
 async def generate_chat_stream(request: ContextChatRequest):

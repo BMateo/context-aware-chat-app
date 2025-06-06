@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { MessageCircle, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import TokenUsage from '../TokenUsage/TokenUsage';
 import styles from './Sidebar.module.css';
 
 export default function Sidebar({ 
@@ -65,54 +66,62 @@ export default function Sidebar({
             <span className={styles.brandName}>Chat History</span>
           </div>
         </div>
-        <ScrollArea className={styles.scrollArea}>
-          <div className={styles.content}>
-            {chatHistory.length === 0 ? (
-              <div className={styles.emptyState}>
-                <MessageCircle className={styles.emptyIcon} />
-                <p className={styles.emptyText}>No conversations yet</p>
-              </div>
-            ) : (
-              <div className={styles.chatList}>
-                {chatHistory.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      styles.chatItem,
-                      currentChatId === chat.id && styles.chatItemActive
-                    )}
-                    onClick={() => handleChatSelect(chat.id)}
-                  >
-                    <div className={styles.chatContent}>
-                      <div className={styles.chatPreview}>
-                        {formatChatPreview(chat)}
-                      </div>
-                      <div className={styles.chatMeta}>
-                        <span className={styles.chatDate}>
-                          {formatDate(chat.createdAt)}
-                        </span>
-                        <span className={styles.messageCount}>
-                          {chat.messages ? chat.messages.length : 0} messages
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={styles.deleteButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteChat(chat.id);
-                      }}
+        
+        <div className={styles.mainContent}>
+          <ScrollArea className={styles.scrollArea}>
+            <div className={styles.content}>
+              {chatHistory.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <MessageCircle className={styles.emptyIcon} />
+                  <p className={styles.emptyText}>No conversations yet</p>
+                </div>
+              ) : (
+                <div className={styles.chatList}>
+                  {chatHistory.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={cn(
+                        styles.chatItem,
+                        currentChatId === chat.id && styles.chatItemActive
+                      )}
+                      onClick={() => handleChatSelect(chat.id)}
                     >
-                      <Trash2 className={styles.deleteIcon} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <div className={styles.chatContent}>
+                        <div className={styles.chatPreview}>
+                          {formatChatPreview(chat)}
+                        </div>
+                        <div className={styles.chatMeta}>
+                          <span className={styles.chatDate}>
+                            {formatDate(chat.createdAt)}
+                          </span>
+                          <span className={styles.messageCount}>
+                            {chat.messages ? chat.messages.length : 0} messages
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={styles.deleteButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteChat(chat.id);
+                        }}
+                      >
+                        <Trash2 className={styles.deleteIcon} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Token Usage Display - Fixed at bottom */}
+          <div className={styles.tokenUsageContainer}>
+            <TokenUsage />
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </>
   );

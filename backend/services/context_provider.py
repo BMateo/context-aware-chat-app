@@ -8,6 +8,7 @@ import sys
 sys.path.append("..")
 from config import settings
 from services.pdf_processor import PDFProcessor, DocumentChunk
+from services.token_tracker import token_tracker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,11 +29,7 @@ class ContextProvider:
         logger.info(f"Initializing ContextProvider with pdf_path: {settings.pdf_path}")
         self.pdf_path = settings.pdf_path
         self.model = model or settings.openai_model
-        self.pdf_processor = PDFProcessor(
-            pdf_path=self.pdf_path,
-            chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap,
-        )
+        self.pdf_processor = PDFProcessor(pdf_path=self.pdf_path)
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.chunks: List[DocumentChunk] = []
         self.chunk_embeddings: List[List[float]] = []
@@ -69,6 +66,11 @@ class ContextProvider:
                 response = self.client.embeddings.create(
                     model=settings.embedding_model, input=batch
                 )
+
+                # Track token usage
+                if hasattr(response, "usage") and response.usage:
+                    token_tracker.track_embedding_usage(response.usage)
+
                 batch_embeddings = [data.embedding for data in response.data]
                 embeddings.extend(batch_embeddings)
                 logger.info(f"Generated embeddings for batch {i//batch_size + 1}")
@@ -90,13 +92,15 @@ class ContextProvider:
         top_k = top_k or settings.top_k_chunks
 
         try:
-            query_embedding = (
-                self.client.embeddings.create(
-                    model=settings.embedding_model, input=query
-                )
-                .data[0]
-                .embedding
+            response = self.client.embeddings.create(
+                model=settings.embedding_model, input=query
             )
+            query_embedding = response.data[0].embedding
+
+            # Track token usage for query embedding
+            if hasattr(response, "usage") and response.usage:
+                token_tracker.track_embedding_usage(response.usage)
+
         except Exception as e:
             logger.error(f"Failed to generate query embedding: {e}")
             return []
@@ -151,7 +155,7 @@ class ContextProvider:
                 content = msg.get("message", msg.get("content", ""))
                 if content.strip():
                     history_parts.append(f"{role}: {content}")
-            
+
             if history_parts:
                 conversation_history = f"""
 
@@ -191,15 +195,22 @@ Your response:
                 max_tokens=settings.openai_max_tokens,
                 temperature=settings.openai_temperature,
                 stream=True,
+                stream_options={"include_usage": True},  # Include usage in streaming
             )
 
             for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
+                if (
+                    len(chunk.choices) > 0
+                    and chunk.choices[0].delta.content is not None
+                ):
                     yield {
                         "type": "content",
                         "content": chunk.choices[0].delta.content,
                         "success": True,
                     }
+                # Track usage when available (usually in the last chunk)
+                if hasattr(chunk, "usage") and chunk.usage:
+                    token_tracker.track_chat_usage(chunk.usage, self.model)
 
             # Send completion signal
             yield {"type": "done", "success": True}

@@ -12,6 +12,8 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { toast } from "sonner";
+import { useTokenUsageContext } from "../contexts/TokenUsageContext";
 import styles from "./ChatInterface.module.css";
 
 export default function ChatInterface({ currentChat, onUpdateMessages }) {
@@ -22,12 +24,14 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
   const [isUploading, setIsUploading] = useState(false);
   const [contextReady, setContextReady] = useState(false);
   const [healthStatus, setHealthStatus] = useState(null);
+  const { refreshUsage } = useTokenUsageContext();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const lastUserMessageRef = useRef(null);
 
   const messages = currentChat?.messages || [];
+  const isChatSelected = currentChat && currentChat.id;
 
   // Auto-scroll to bottom when selecting a new chat
   useEffect(() => {
@@ -51,12 +55,16 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       setContextReady(healthData.context_provider_ready);
     } catch (error) {
       console.error("Error fetching health status:", error);
+      toast.error("Connection error", {
+        description:
+          "Unable to connect to the server. Please check your connection.",
+      });
       // Set default state on error
       setHealthStatus({
         context_provider_ready: false,
         pdf_loaded: false,
         chunks_count: 0,
-        message: "Unable to connect to server"
+        message: "Unable to connect to server",
       });
       setContextReady(false);
     }
@@ -127,7 +135,6 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
           if (data.type === "content") {
             accumulatedContent += data.content;
 
@@ -143,6 +150,8 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
             // Streaming complete
             setIsTyping(false);
             eventSource.close();
+            // Refresh token usage after chat completion
+            refreshUsage();
           } else if (data.type === "error") {
             console.error("Streaming error:", data.error);
             const errorMessage = {
@@ -163,6 +172,10 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
 
       eventSource.onerror = (event) => {
         console.error("SSE connection error:", event);
+        toast.error("Connection error", {
+          description:
+            "Lost connection to the server. Please try sending your message again.",
+        });
         const errorMessage = {
           role: "ai",
           content: "Sorry, I encountered a connection error. Please try again.",
@@ -176,6 +189,10 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       };
     } catch (error) {
       console.error("Error setting up streaming:", error);
+      toast.error("Streaming error", {
+        description:
+          "Failed to establish connection for real-time chat. Please try again.",
+      });
       const errorMessage = {
         role: "ai",
         content: "Sorry, I encountered an error. Please try again.",
@@ -216,11 +233,18 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     if (!file) return;
 
     if (!file.type.includes("pdf")) {
-      alert("Please select a PDF file");
+      toast.error("Invalid file type", {
+        description: "Please select a PDF file to upload.",
+      });
       return;
     }
 
     setIsUploading(true);
+
+    // Show loading toast
+    const uploadingToast = toast.loading("Uploading PDF...", {
+      description: "Processing your document, please wait.",
+    });
 
     try {
       const formData = new FormData();
@@ -233,23 +257,34 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
 
       const result = await response.json();
 
+      // Dismiss the loading toast
+      toast.dismiss(uploadingToast);
+
       if (response.ok) {
         const sizeInfo = result.file_size_mb
           ? ` (${result.file_size_mb}MB)`
           : "";
-        alert(
-          `PDF "${file.name}"${sizeInfo} uploaded successfully! The chatbot is now ready with your new document.`
-        );
+        toast.success("PDF uploaded successfully!", {
+          description: `${file.name}${sizeInfo} is ready for chat. You can now ask questions about your document.`,
+        });
         // Update health status from upload response
         if (result.health_status) {
           setHealthStatus(result.health_status);
           setContextReady(result.health_status.context_provider_ready);
         }
+        // Refresh token usage after successful file upload
+        refreshUsage();
       } else {
         // Handle error response
-        const errorMessage = result.detail?.error || result.detail || result.message || "Unknown error";
-        alert(`Failed to upload PDF: ${errorMessage}`);
-        
+        const errorMessage =
+          result.detail?.error ||
+          result.detail ||
+          result.message ||
+          "Unknown error";
+        toast.error("Upload failed", {
+          description: errorMessage,
+        });
+
         // Update health status from error response if available
         if (result.detail?.health_status) {
           setHealthStatus(result.detail.health_status);
@@ -257,8 +292,13 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
         }
       }
     } catch (error) {
+      // Dismiss the loading toast
+      toast.dismiss(uploadingToast);
       console.error("Error uploading PDF:", error);
-      alert("Failed to upload PDF. Please try again.");
+      toast.error("Upload failed", {
+        description:
+          "Network error. Please check your connection and try again.",
+      });
       // On network error, keep current state or fetch fresh status
       fetchHealthStatus();
     } finally {
@@ -275,7 +315,9 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
           {messages.length === 0 && !isTyping && (
             <div className={styles.emptyState}>
               <p className={styles.emptyText}>
-                {contextReady
+                {!isChatSelected
+                  ? "Please select a chat from the sidebar to start messaging"
+                  : contextReady
                   ? "Start a conversation with the AI assistant about your uploaded document"
                   : "Upload a PDF file below to start chatting with the AI assistant"}
               </p>
@@ -358,11 +400,13 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
       </ScrollArea>
       <div className={styles.inputSection}>
         {/* Status indicator */}
-        {healthStatus && !contextReady && (
+        {(!isChatSelected || (healthStatus && !contextReady)) && (
           <div className={styles.statusIndicator}>
             <div className={cn(styles.statusDot, styles.statusNotReady)} />
             <span className={styles.statusText}>
-              {"Please upload a PDF file to start chatting"}
+              {!isChatSelected
+                ? "Select a chat to start messaging"
+                : "Please upload a PDF file to start chatting"}
             </span>
           </div>
         )}
@@ -383,8 +427,8 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
             size="icon"
             className={styles.uploadButton}
             onClick={handleFileUpload}
-            disabled={isUploading || isTyping}
-            title="Upload PDF"
+            disabled={isUploading || isTyping || !isChatSelected}
+            title={!isChatSelected ? "Select a chat first" : "Upload PDF"}
           >
             {isUploading ? (
               <div className={styles.spinner} />
@@ -395,7 +439,9 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
 
           <Textarea
             placeholder={
-              contextReady
+              !isChatSelected
+                ? "Select a chat to start messaging..."
+                : contextReady
                 ? "Type a message..."
                 : "Please wait for PDF to load..."
             }
@@ -403,12 +449,12 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             className={styles.textarea}
-            disabled={isLoading || !contextReady || isTyping}
+            disabled={isLoading || !contextReady || isTyping || !isChatSelected}
           />
           <Button
             className={styles.sendButton}
             onClick={handleSend}
-            disabled={isLoading || !input.trim() || !contextReady || isTyping}
+            disabled={isLoading || !input.trim() || !contextReady || isTyping || !isChatSelected}
           >
             {isLoading ? "Sending..." : "Send"}
           </Button>

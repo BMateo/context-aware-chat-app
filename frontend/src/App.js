@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from "react";
 import "./App.css";
 import AppContainer from "./components/AppContainer/AppContainer";
 import ChatInterface from "./pages/ChatInterface";
+import { Toaster } from "sonner";
+import { TokenUsageProvider } from "./contexts/TokenUsageContext";
 
 function App() {
   const [chatHistory, setChatHistory] = useState([]);
@@ -33,7 +35,7 @@ function App() {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-
+    console.log("newChat", newChat);
     setChatHistory(prev => [newChat, ...prev]);
     setCurrentChatId(newChatId);
   }, []);
@@ -98,19 +100,27 @@ function App() {
 
   return (
     <div className="App">
-      <AppContainer
-        onClearConversation={handleClearConversation}
-        onNewChat={handleNewChat}
-        chatHistory={chatHistory}
-        currentChatId={currentChatId}
-        onSelectChat={handleSelectChat}
-        onDeleteChat={handleDeleteChat}
-      >
-        <ChatInterface
-          currentChat={getCurrentChat()}
-          onUpdateMessages={updateCurrentChatMessages}
-        />
-      </AppContainer>
+      <Toaster 
+        position="top-right"
+        richColors
+        closeButton
+        duration={4000}
+      />
+      <TokenUsageProvider>
+        <AppContainer
+          onClearConversation={handleClearConversation}
+          onNewChat={handleNewChat}
+          chatHistory={chatHistory}
+          currentChatId={currentChatId}
+          onSelectChat={handleSelectChat}
+          onDeleteChat={handleDeleteChat}
+        >
+          <ChatInterface
+            currentChat={getCurrentChat()}
+            onUpdateMessages={updateCurrentChatMessages}
+          />
+        </AppContainer>
+      </TokenUsageProvider>
     </div>
   );
 }
