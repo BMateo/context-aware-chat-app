@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict
 from dataclasses import dataclass
 from pathlib import Path
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -35,11 +36,9 @@ class DocumentChunk:
 class PDFProcessor:
     """Main PDF processing pipeline"""
 
-    def __init__(self, pdf_path: str, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, pdf_path: str):
         logger.info(f"Initializing PDFProcessor with pdf_path: {pdf_path}")
         self.pdf_path = Path(pdf_path)
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
         self.raw_text = ""
         self.pages_text = []
         self.chunks = []
@@ -104,10 +103,18 @@ class PDFProcessor:
         return text
 
     def create_chunks(self) -> List[DocumentChunk]:
-        """Split text into overlapping chunks"""
+        """Split text into chunks using RecursiveCharacterTextSplitter"""
         chunks = []
         chunk_index = 0
 
+        # Initialize the RecursiveCharacterTextSplitter with specified parameters
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=400,
+            chunk_overlap=0,
+            separators=["\n\n", "\n", ".", "?", "!", " ", ""],
+        )
+
+        start_char = 0
         for page_info in self.pages_text:
             page_number = page_info["page_number"]
             page_text = self.clean_text(page_info["text"])
@@ -116,41 +123,35 @@ class PDFProcessor:
             if not page_text.strip():
                 continue
 
-            # Split page into chunks
-            words = page_text.split()
+            # Split page text using RecursiveCharacterTextSplitter
+            page_chunks = text_splitter.split_text(page_text)
 
-            i = 0
-            while i < len(words):
-                # Calculate chunk boundaries
-                chunk_words = words[i : i + self.chunk_size]
-                chunk_text = " ".join(chunk_words)
+            # Convert to DocumentChunk objects
+            for chunk_text in page_chunks:
+                if not chunk_text.strip():  # Skip empty chunks
+                    continue
 
-                # Calculate character positions (approximate)
-                start_char = len(" ".join(words[:i]))
-                end_char = start_char + len(chunk_text)
+                # Calculate character positions and word count
+                word_count = len(chunk_text.split())
 
                 # Create chunk
                 chunk = DocumentChunk(
-                    content=chunk_text,
+                    content=chunk_text.strip(),
                     page_number=page_number,
                     chunk_index=chunk_index,
-                    start_char=start_char,
-                    end_char=end_char,
-                    word_count=len(chunk_words),
+                    start_char=start_char,  # We'll approximate this for now
+                    end_char=start_char + len(chunk_text),
+                    word_count=word_count,
                 )
 
                 chunks.append(chunk)
                 chunk_index += 1
-
-                # Move to next chunk with overlap
-                i += self.chunk_size - self.chunk_overlap
-
-                # Avoid infinite loop on small pages
-                if i >= len(words):
-                    break
-
+                start_char += len(chunk_text)
         self.chunks = chunks
-        logger.info(f"Created {len(chunks)} chunks")
+
+        logger.info(
+            f"Created {len(chunks)} chunks using RecursiveCharacterTextSplitter"
+        )
         return chunks
 
     def get_statistics(self) -> Dict:

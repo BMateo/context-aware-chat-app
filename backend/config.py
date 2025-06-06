@@ -19,11 +19,9 @@ class Settings(BaseSettings):
     # PDF Configuration
     pdf_path: str = ""  # No default PDF - users will upload their own
     max_file_size_mb: int = 30  # Maximum PDF file size in MB
-    chunk_size: int = 1000
-    chunk_overlap: int = 200
     
     # Context Provider Configuration
-    top_k_chunks: int = 3
+    top_k_chunks: int = 5
     similarity_threshold: float = 0.1
     embedding_model: str = "text-embedding-ada-002"
     embedding_batch_size: int = 100
