@@ -79,14 +79,6 @@ async def get_messages():
     return messages_store
 
 
-@app.delete("/messages/clear")
-async def clear_messages():
-    """Clear all chat messages."""
-    global messages_store
-    messages_store = []
-    return {"message": "All messages cleared"}
-
-
 @app.delete("/messages/clear/{chat_id}")
 async def clear_messages_by_chat(chat_id: str):
     """Clear messages for a specific chat."""
