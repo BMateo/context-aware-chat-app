@@ -16,7 +16,6 @@ class DocumentChunk:
     """Represents a chunk of text from the PDF with metadata"""
 
     content: str
-    page_number: int
     chunk_index: int
     start_char: int
     end_char: int
@@ -25,7 +24,6 @@ class DocumentChunk:
     def to_dict(self) -> Dict:
         return {
             "content": self.content,
-            "page_number": self.page_number,
             "chunk_index": self.chunk_index,
             "start_char": self.start_char,
             "end_char": self.end_char,
@@ -56,7 +54,8 @@ class PDFProcessor:
 
                 logger.info(f"PDF has {len(pdf_reader.pages)} pages")
 
-                # Extract text from each page
+                # Extract text from each page and build continuous raw text
+                all_text_parts = []
                 for page_num, page in enumerate(pdf_reader.pages):
                     try:
                         page_text = page.extract_text()
@@ -64,14 +63,15 @@ class PDFProcessor:
                             self.pages_text.append(
                                 {"page_number": page_num + 1, "text": page_text}
                             )
-                            self.raw_text += (
-                                f"\n--- Page {page_num + 1} ---\n{page_text}\n"
-                            )
+                            all_text_parts.append(page_text)
                     except Exception as e:
                         logger.warning(
                             f"Failed to extract text from page {page_num + 1}: {e}"
                         )
                         continue
+
+                # Create continuous raw text without page separators
+                self.raw_text = " ".join(all_text_parts)
 
                 logger.info(
                     f"Successfully extracted text from {len(self.pages_text)} pages"
@@ -103,9 +103,8 @@ class PDFProcessor:
         return text
 
     def create_chunks(self) -> List[DocumentChunk]:
-        """Split text into chunks using RecursiveCharacterTextSplitter"""
+        """Split entire document text into chunks using RecursiveCharacterTextSplitter"""
         chunks = []
-        chunk_index = 0
 
         # Initialize the RecursiveCharacterTextSplitter with specified parameters
         text_splitter = RecursiveCharacterTextSplitter(
@@ -114,43 +113,42 @@ class PDFProcessor:
             separators=["\n\n", "\n", ".", "?", "!", " ", ""],
         )
 
-        start_char = 0
-        for page_info in self.pages_text:
-            page_number = page_info["page_number"]
-            page_text = self.clean_text(page_info["text"])
+        # Clean the entire raw text
+        # cleaned_text = self.clean_text(self.raw_text)
+        cleaned_text = self.raw_text
 
-            # Skip empty pages
-            if not page_text.strip():
+        if not cleaned_text.strip():
+            logger.warning("No text content available for chunking")
+            return chunks
+
+        # Split the entire document text
+        text_chunks = text_splitter.split_text(cleaned_text)
+
+        # Convert to DocumentChunk objects
+        start_char = 0
+        for chunk_index, chunk_text in enumerate(text_chunks):
+            if not chunk_text.strip():  # Skip empty chunks
                 continue
 
-            # Split page text using RecursiveCharacterTextSplitter
-            page_chunks = text_splitter.split_text(page_text)
+            # Calculate word count
+            word_count = len(chunk_text.split())
 
-            # Convert to DocumentChunk objects
-            for chunk_text in page_chunks:
-                if not chunk_text.strip():  # Skip empty chunks
-                    continue
+            # Create chunk
+            chunk = DocumentChunk(
+                content=chunk_text.strip(),
+                chunk_index=chunk_index,
+                start_char=start_char,
+                end_char=start_char + len(chunk_text),
+                word_count=word_count,
+            )
 
-                # Calculate character positions and word count
-                word_count = len(chunk_text.split())
+            chunks.append(chunk)
+            start_char += len(chunk_text)
 
-                # Create chunk
-                chunk = DocumentChunk(
-                    content=chunk_text.strip(),
-                    page_number=page_number,
-                    chunk_index=chunk_index,
-                    start_char=start_char,  # We'll approximate this for now
-                    end_char=start_char + len(chunk_text),
-                    word_count=word_count,
-                )
-
-                chunks.append(chunk)
-                chunk_index += 1
-                start_char += len(chunk_text)
         self.chunks = chunks
 
         logger.info(
-            f"Created {len(chunks)} chunks using RecursiveCharacterTextSplitter"
+            f"Created {len(chunks)} chunks from entire document using RecursiveCharacterTextSplitter"
         )
         return chunks
 
