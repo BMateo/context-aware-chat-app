@@ -100,7 +100,9 @@ OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ### Frontend
-No environment variables required for basic setup. The frontend connects to `http://localhost:8000` by default.
+```env
+REACT_APP_API_BASE_URL=http://localhost:8000
+```
 
 ## 🎯 Design Decisions
 
@@ -130,7 +132,7 @@ No environment variables required for basic setup. The frontend connects to `htt
 - **Solution**: Fetch health status on file upload and initial render
 
 ### 3. **Document Chunking Performance**
-- **Challenge**: Initial chunking strategy poor at answering meta-questions about documents
+- **Challenge**: Initial chunking strategy poor at answering meta/general questions about documents
 - **Solution**: Implemented RecursiveCharacterTextSplitter with optimized separators
 
 ### 4. **Message Persistence**
