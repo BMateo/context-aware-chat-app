@@ -2,15 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
-import {
-  Copy,
-  Download,
-  ThumbsUp,
-  ThumbsDown,
-  MoreHorizontal,
-  Upload,
-  FileText,
-} from "lucide-react";
+import { Copy, Upload } from "lucide-react";
 import { cn } from "../lib/utils";
 import { toast } from "sonner";
 import { useTokenUsageContext } from "../contexts/TokenUsageContext";
@@ -32,7 +24,8 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
   const textareaRef = useRef(null);
 
   // API Base URL from environment variable
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+  const API_BASE_URL =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:8000";
 
   const messages = currentChat?.messages || [];
   const isChatSelected = currentChat && currentChat.id;
@@ -59,7 +52,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     fetchHealthStatus();
   }, []);
 
-  // Remove health stream logic and replace with simple fetch
+  // Fetch health status from backend
   const fetchHealthStatus = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
@@ -83,6 +76,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     }
   };
 
+  // Scroll to bottom of messages container
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -92,6 +86,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     }
   };
 
+  // Position the user's message at the top of the viewport
   const scrollToUserMessage = () => {
     if (lastUserMessageRef.current) {
       lastUserMessageRef.current.scrollIntoView({
@@ -102,6 +97,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     }
   };
 
+  // Handle sending a message to the AI assistant
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -224,6 +220,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     }
   };
 
+  // Submit message when Enter key is pressed
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -231,6 +228,7 @@ export default function ChatInterface({ currentChat, onUpdateMessages }) {
     }
   };
 
+  // Copy message to clipboard
   const handleCopyMessage = (content, messageIndex) => {
     navigator.clipboard.writeText(content);
     setCopiedMessageIndex(messageIndex);

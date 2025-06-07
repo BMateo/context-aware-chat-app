@@ -8,6 +8,7 @@ export const useTokenUsage = () => {
   // API Base URL from environment variable
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
+  // Fetch token usage from backend
   const fetchTokenUsage = useCallback(async () => {
     try {
       setLoading(true);
@@ -29,6 +30,7 @@ export const useTokenUsage = () => {
     }
   }, []);
 
+  // Refresh token usage to update the UI
   const refreshUsage = useCallback(() => {
     fetchTokenUsage();
   }, [fetchTokenUsage]);

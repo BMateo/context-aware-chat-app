@@ -13,9 +13,14 @@ function App() {
   // API Base URL from environment variable
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
+  // Load conversations on render
+  useEffect(() => {
+    fetchAndReconstructConversations();
+  }, []);
+
   // Generate unique ID for new chats
   const generateChatId = () => {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    return Date.now().toString() + Math.random().toString(36).substring(2, 11);
   };
 
   // Fetch all messages and reconstruct conversations
@@ -26,7 +31,6 @@ function App() {
 
       if (response.ok) {
         const allMessages = await response.json();
-        console.log("allMessages", allMessages);
         if (allMessages.length > 0) {
           // Group messages by chat_id
           const chatGroups = {};
@@ -58,7 +62,6 @@ function App() {
               updatedAt: chatMessages[chatMessages.length - 1]?.timestamp ? new Date(chatMessages[chatMessages.length - 1].timestamp) : new Date(),
             };
           });
-          console.log("reconstructedChats", reconstructedChats);
           // Sort chats by most recent activity (you could use actual timestamps)
           reconstructedChats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
@@ -69,7 +72,6 @@ function App() {
             setCurrentChatId(reconstructedChats[0].id);
           }
 
-          console.log(`📝 Reconstructed ${reconstructedChats.length} conversations with ${allMessages.length} total messages`);
         } else {
           // No messages in backend, create initial chat
           createInitialChat();
@@ -99,11 +101,6 @@ function App() {
     setCurrentChatId(initialChatId);
   };
 
-  // Load conversations on app start
-  useEffect(() => {
-    fetchAndReconstructConversations();
-  }, []);
-
   const handleNewChat = useCallback(() => {
     const newChatId = generateChatId();
     const newChat = {
@@ -112,7 +109,6 @@ function App() {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    console.log("newChat", newChat);
     setChatHistory(prev => [newChat, ...prev]);
     setCurrentChatId(newChatId);
   }, []);
@@ -126,9 +122,6 @@ function App() {
         });
 
         if (response.ok) {
-          const result = await response.json();
-          console.log(`🗑️ ${result.message}`);
-          
           // Update frontend state to clear messages for this chat
           setChatHistory(prev =>
             prev.map(chat =>
@@ -137,7 +130,7 @@ function App() {
                 : chat
             )
           );
-          
+
           // Show success notification
           toast.success("Conversation cleared", {
             description: "All messages in this conversation have been deleted.",
@@ -185,14 +178,11 @@ function App() {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log(`🗑️ ${result.message}`);
-        
         // Update frontend state to clear messages for this chat
-        setChatHistory(prev => 
+        setChatHistory(prev =>
           prev.filter(chat => chat.id !== chatId)
         );
-        
+
         // Show success notification
         toast.success("Chat messages cleared", {
           description: "All messages in this chat have been deleted.",
