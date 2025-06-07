@@ -233,6 +233,52 @@ function App() {
     return chatHistory.find(chat => chat.id === currentChatId) || { messages: [] };
   };
 
+  // Export current conversation to markdown
+  const handleExportConversation = useCallback(() => {
+    const currentChat = getCurrentChat();
+    console.log("currentChat", currentChat);
+    if (!currentChat || currentChat.messages.length === 0) {
+      toast.error("No conversation to export", {
+        description: "Start a conversation before exporting.",
+      });
+      return;
+    } 
+
+    // Generate markdown content
+    const timestamp = new Date().toLocaleDateString();
+    let markdown = `# Conversation\n\n`;
+    markdown += `**Exported on:** ${timestamp}\n\n`;
+    markdown += `**Total Messages:** ${currentChat.messages.length}\n\n`;
+    markdown += `---\n\n`;
+
+    currentChat.messages.forEach((message, index) => {
+      const role = message.role === 'human' ? '**You**' : '**AI Assistant**';
+      const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString() : '';
+      
+      markdown += `## ${role} ${time ? `(${time})` : ''}\n\n`;
+      markdown += `${message.content}\n\n`;
+      
+      if (index < currentChat.messages.length - 1) {
+        markdown += `---\n\n`;
+      }
+    });
+
+    // Create and download file
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `conversation-${currentChat.id}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("Conversation exported", {
+      description: "Your conversation has been downloaded as a markdown file.",
+    });
+  }, [currentChatId, chatHistory]);
+
   return (
     <div className="App">
       <Toaster
@@ -265,8 +311,10 @@ function App() {
           <AppContainer
             onClearConversation={handleClearConversation}
             onNewChat={handleNewChat}
+            onExportConversation={handleExportConversation}
             chatHistory={chatHistory}
             currentChatId={currentChatId}
+            currentChat={getCurrentChat()}
             onSelectChat={handleSelectChat}
             onDeleteChat={handleDeleteChat}
           >

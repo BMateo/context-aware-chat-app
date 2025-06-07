@@ -11,6 +11,7 @@ A modern, real-time chat application that allows users to upload PDF documents a
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
 - **Smart Text Chunking**: Optimized document processing for better context retrieval
 - **Error Handling**: Comprehensive error handling with user-friendly notifications
+- **Export Functionality**: Export conversations as markdown
 
 ## 🏗️ Architecture
 
@@ -141,7 +142,6 @@ REACT_APP_API_BASE_URL=http://localhost:8000
 
 ## Improvements (TODOS)
 
-- **Export Functionality**: Export conversations as PDF or markdown
 - **API Rate Limiting**: Implement proper rate limiting in the backend
 - **File Format Support**: Extend to Word docs, text files, and images
 - **Markdown Rendering**: Render the chat responses as markdown

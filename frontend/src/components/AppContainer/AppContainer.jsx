@@ -9,8 +9,10 @@ export default function AppContainer({
   children, 
   onClearConversation, 
   onNewChat,
+  onExportConversation,
   chatHistory,
   currentChatId,
+  currentChat,
   onSelectChat,
   onDeleteChat
 }) {
@@ -70,6 +72,8 @@ export default function AppContainer({
         <AppHeader 
           onClearConversation={onClearConversation} 
           onNewChat={onNewChat}
+          onExportConversation={onExportConversation}
+          currentChat={currentChat}
           onToggleSidebar={handleToggleSidebar}
           isMobile={isMobile}
         />
